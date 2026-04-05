@@ -163,10 +163,12 @@ export default function MovieDetailsScreen() {
             contentContainerStyle={styles.creditsList}
             renderItem={({ item }) => (
               <View style={styles.castItem}>
-                <Image 
-                  source={{ uri: item.imageUrl || 'https://via.placeholder.com/150x150/1a1a1a/666666?text=No+Img' }} 
-                  style={styles.castImage} 
-                />
+                <View style={styles.castImageWrapper}>
+                  <Image
+                    source={{ uri: item.imageUrl || 'https://via.placeholder.com/150x150/1a1a1a/666666?text=No+Img' }}
+                    style={styles.castImage}
+                  />
+                </View>
                 <Text style={styles.castName} numberOfLines={1}>{item.name}</Text>
                 <Text style={styles.castCharacter} numberOfLines={1}>{item.role}</Text>
               </View>
@@ -368,27 +370,34 @@ const styles = StyleSheet.create({
     paddingRight: 8,
   },
   castItem: {
-    width: 100,
+    width: 120,
     marginRight: 16,
     alignItems: 'center',
   },
-  castImage: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
+  castImageWrapper: {
+    width: 116,
+    height: 116,
+    borderRadius: 58,
+    overflow: 'hidden',
     marginBottom: 10,
     backgroundColor: '#333',
+    justifyContent: 'flex-start',
+  },
+  castImage: {
+    width: '100%',
+    height: 155,
+    resizeMode: 'cover',
   },
   castName: {
     color: '#fff',
     fontFamily: 'Inter_600SemiBold',
-    fontSize: 12,
+    fontSize: 13,
     textAlign: 'center',
   },
   castCharacter: {
     color: '#777',
     fontFamily: 'Inter_400Regular',
-    fontSize: 11,
+    fontSize: 12,
     textAlign: 'center',
     marginTop: 4,
   },
