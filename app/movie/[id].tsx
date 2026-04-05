@@ -361,14 +361,14 @@ const styles = StyleSheet.create({
     paddingRight: 8,
   },
   castItem: {
-    width: 80,
+    width: 100,
     marginRight: 16,
     alignItems: 'center',
   },
   castImage: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
+    width: 96,
+    height: 96,
+    borderRadius: 48,
     marginBottom: 10,
     backgroundColor: '#333',
   },
