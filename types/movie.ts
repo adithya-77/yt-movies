@@ -23,6 +23,9 @@ export interface IMDbMovie {
     voteCount?: number;
   };
   runtimeSeconds?: number;
+  stars?: any[];
+  directors?: any[];
+  writers?: any[];
 }
 
 export interface CachedMovie extends Movie {

@@ -12,8 +12,7 @@ const { width, height } = Dimensions.get('window');
 export default function MovieDetailsScreen() {
   const { movieData } = useLocalSearchParams();
   const router = useRouter();
-  
-  const [credits, setCredits] = useState<IMDbCredit[]>([]);
+
   const [cbfc, setCbfc] = useState<string>('');
   const [plotExpanded, setPlotExpanded] = useState(false);
 
@@ -21,9 +20,6 @@ export default function MovieDetailsScreen() {
   const movie: CachedMovie = JSON.parse(movieData as string);
 
   useEffect(() => {
-    fetchIMDbCredits(movie.imdb_id).then(data => {
-      setCredits(data);
-    });
     fetchIMDbCertificates(movie.imdb_id).then((certs: IMDbCertificate[]) => {
       const indiaCert = certs.find(c => c.country.code === 'IN');
       if (indiaCert) {
@@ -53,21 +49,32 @@ export default function MovieDetailsScreen() {
     }
   };
 
-  const castItems = credits.filter(c => c.category === 'actor').map(c => ({
-    id: c.name.id,
-    name: c.name.displayName,
-    imageUrl: c.name.primaryImage?.url,
-    role: c.characters && c.characters.length > 0 ? c.characters[0] : 'Actor'
+  const dbStars = movie.imdbData?.stars || [];
+  const dbDirectors = movie.imdbData?.directors || [];
+  const dbWriters = movie.imdbData?.writers || [];
+
+  const castItems = dbStars.map((c: any) => ({
+    id: c.id,
+    name: c.displayName,
+    imageUrl: c.primaryImage?.url,
+    role: 'Actor'
   }));
 
-  const crewItems = credits.filter(c => c.category === 'director' || c.category === 'writer').map(c => ({
-    id: c.name.id + c.category,
-    name: c.name.displayName,
-    imageUrl: c.name.primaryImage?.url,
-    role: c.category.charAt(0).toUpperCase() + c.category.slice(1) // "Director", "Writer"
+  const directorItems = dbDirectors.map((c: any) => ({
+    id: c.id + 'director',
+    name: c.displayName,
+    imageUrl: c.primaryImage?.url,
+    role: 'Director'
   }));
 
-  const combinedCredits = [...crewItems, ...castItems];
+  const writerItems = dbWriters.map((c: any) => ({
+    id: c.id + 'writer',
+    name: c.displayName,
+    imageUrl: c.primaryImage?.url,
+    role: 'Writer'
+  }));
+
+  const combinedCredits = [...directorItems, ...writerItems, ...castItems];
 
   return (
     <View style={styles.container}>
