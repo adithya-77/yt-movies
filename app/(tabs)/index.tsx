@@ -29,6 +29,16 @@ import { validateImdbId, validateYouTubeUrl, formatImdbId } from '@/utils/valida
 
 const { width, height } = Dimensions.get('window');
 
+// Safely parse genres (handles string, array, or undefined)
+const parseGenres = (raw: any): string[] => {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw === 'string') {
+    try { return JSON.parse(raw); } catch { return []; }
+  }
+  return [];
+};
+
 export default function HomeScreen() {
   const router = useRouter();
   const [movies, setMovies] = useState<CachedMovie[]>([]);
@@ -211,51 +221,70 @@ export default function HomeScreen() {
     return [...movies].sort(() => 0.5 - Math.random()).slice(0, Math.min(5, movies.length));
   }, [movies]);
 
+
+
+  const sections = useMemo(() => {
+    if (movies.length === 0) return [];
+
+    const result: any[] = [];
+
+    // 1. Recently Added
+    result.push({
+      id: 'recent',
+      title: 'Recently Added',
+      data: movies.slice(0, 10),
+    });
+
+    const genreMap: Record<string, CachedMovie[]> = {};
+    movies.forEach(movie => {
+      const movieGenres = parseGenres(movie.genres).length > 0
+        ? parseGenres(movie.genres)
+        : parseGenres(movie.imdbData?.genres);
+      if (movieGenres.length === 0) {
+        if (!genreMap['Other']) genreMap['Other'] = [];
+        genreMap['Other'].push(movie);
+      } else {
+        movieGenres.forEach((genre: string) => {
+          if (!genreMap[genre]) genreMap[genre] = [];
+          genreMap[genre].push(movie);
+        });
+      }
+    });
+
+    Object.entries(genreMap).forEach(([genre, genreMovies], index, arr) => {
+      result.push({
+        id: `genre-${genre}`,
+        title: genre,
+        data: genreMovies,
+        isLast: index === arr.length - 1
+      });
+    });
+
+    return result;
+  }, [movies]);
+
   if (loading && !refreshing) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
-          <Text style={{color: '#fff', fontFamily: 'Inter_400Regular'}}>Loading...</Text>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <Text style={{ color: '#fff', fontFamily: 'Inter_400Regular' }}>Loading...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  const heroMovie = movies.length > 0 ? movies[0] : null;
-
-  // Safely parse genres (handles string, array, or undefined)
-  const parseGenres = (raw: any): string[] => {
-    if (!raw) return [];
-    if (Array.isArray(raw)) return raw;
-    if (typeof raw === 'string') {
-      try { return JSON.parse(raw); } catch { return []; }
-    }
-    return [];
-  };
-
-  // Group movies by genre
-  const genreMap: Record<string, CachedMovie[]> = {};
-  movies.forEach(movie => {
-    const movieGenres = parseGenres(movie.genres).length > 0
-      ? parseGenres(movie.genres)
-      : parseGenres(movie.imdbData?.genres);
-    if (movieGenres.length === 0) {
-      if (!genreMap['Other']) genreMap['Other'] = [];
-      genreMap['Other'].push(movie);
-    } else {
-      movieGenres.forEach((genre: string) => {
-        if (!genreMap[genre]) genreMap[genre] = [];
-        genreMap[genre].push(movie);
-      });
-    }
-  });
-  const genreSections = Object.entries(genreMap);
-
   return (
     <View style={styles.mainWrapper}>
-      <ScrollView
+      {/* Hamburger icon at top left */}
+      <SafeAreaView style={styles.topBar}>
+        <TouchableOpacity style={styles.hamburgerBtn} onPress={() => setMenuVisible(true)}>
+          <Menu color="#fff" size={24} />
+        </TouchableOpacity>
+      </SafeAreaView>
+
+      <FlatList
         style={styles.container}
-        bounces={false}
+        data={sections}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -264,76 +293,57 @@ export default function HomeScreen() {
             colors={['#fff']}
           />
         }
-      >
-        {/* Hamburger icon at top left */}
-        <SafeAreaView style={styles.topBar}>
-          <TouchableOpacity style={styles.hamburgerBtn} onPress={() => setMenuVisible(true)}>
-            <Menu color="#fff" size={24} />
-          </TouchableOpacity>
-        </SafeAreaView>
-
-        {heroMovies.length > 0 ? (
+        keyExtractor={(item) => item.id}
+        ListHeaderComponent={(
           <View>
-            <FlatList
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              data={heroMovies}
-              keyExtractor={(item) => 'hero-' + item.id}
-              onMomentumScrollEnd={(e) => {
-                const idx = Math.round(e.nativeEvent.contentOffset.x / width);
-                setHeroIndex(idx);
-              }}
-              renderItem={({ item }) => renderHeroBanner(item)}
-            />
-            {/* Dot indicators */}
-            <View style={styles.dotsContainer}>
-              {heroMovies.map((_, i) => (
-                <View key={i} style={[styles.dot, heroIndex === i && styles.dotActive]} />
-              ))}
-            </View>
-          </View>
-        ) : (
-          <View style={[styles.heroContainer, {justifyContent: 'center', alignItems: 'center', backgroundColor: '#1a1a1a'}]}>
-            <Text style={{color: '#999'}}>No Featured Movie</Text>
-          </View>
-        )}
-
-        {/* Recently Added section */}
-        <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>Recently Added</Text>
-          <FlatList
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            data={movies.slice(0, 10)}
-            keyExtractor={(item) => 'recent-' + item.id}
-            renderItem={({ item }) => (
-              <View style={{ marginRight: 12 }}>
-                <MovieCard 
-                  movie={item} 
-                  onPress={() => handleMoviePress(item)} 
-                  width={width * 0.32}
-                  height={width * 0.48}
+            {heroMovies.length > 0 ? (
+              <View>
+                <FlatList
+                  horizontal
+                  pagingEnabled
+                  showsHorizontalScrollIndicator={false}
+                  data={heroMovies}
+                  keyExtractor={(item) => 'hero-' + item.id}
+                  onMomentumScrollEnd={(e) => {
+                    const idx = Math.round(e.nativeEvent.contentOffset.x / width);
+                    setHeroIndex(idx);
+                  }}
+                  renderItem={({ item }) => renderHeroBanner(item)}
                 />
+                {/* Dot indicators */}
+                <View style={styles.dotsContainer}>
+                  {heroMovies.map((_, i) => (
+                    <View key={i} style={[styles.dot, heroIndex === i && styles.dotActive]} />
+                  ))}
+                </View>
+              </View>
+            ) : (
+              <View style={[styles.heroContainer, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#1a1a1a' }]}>
+                <Text style={{ color: '#999' }}>No Featured Movie</Text>
               </View>
             )}
-            contentContainerStyle={styles.horizontalListContent}
-          />
-        </View>
-
-        {genreSections.map(([genre, genreMovies], index) => (
-          <View key={genre} style={[styles.sectionContainer, index === genreSections.length - 1 && { marginBottom: 80 }]}>
-            <Text style={styles.sectionTitle}>{genre}</Text>
+            {error && (
+              <View style={styles.errorContainer}>
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            )}
+          </View>
+        )}
+        renderItem={({ item }) => (
+          <View style={[styles.sectionContainer, item.isLast && { marginBottom: 80 }]}>
+            <Text style={styles.sectionTitle}>{item.title}</Text>
             <FlatList
               horizontal
               showsHorizontalScrollIndicator={false}
-              data={genreMovies}
-              keyExtractor={(item) => item.id + genre}
-              renderItem={({ item }) => (
+              initialNumToRender={4}
+              windowSize={3}
+              data={item.data}
+              keyExtractor={(movie) => movie.id + item.id}
+              renderItem={({ item: movie }) => (
                 <View style={{ marginRight: 12 }}>
                   <MovieCard 
-                    movie={item} 
-                    onPress={() => handleMoviePress(item)} 
+                    movie={movie}
+                    onPress={() => handleMoviePress(movie)} 
                     width={width * 0.32}
                     height={width * 0.48}
                   />
@@ -342,14 +352,8 @@ export default function HomeScreen() {
               contentContainerStyle={styles.horizontalListContent}
             />
           </View>
-        ))}
-
-        {error && (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
         )}
-      </ScrollView>
+      />
 
       {/* Side Menu Overlay */}
       <Modal
