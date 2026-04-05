@@ -14,6 +14,7 @@ import { Header } from '@/components/Header';
 import { InputField } from '@/components/InputField';
 import { supabase } from '@/lib/supabase';
 import { validateImdbId, validateYouTubeUrl, validateMovieName, formatImdbId } from '@/utils/validation';
+import { fetchIMDbData } from '@/services/imdb';
 
 export default function AddMovieScreen() {
   const router = useRouter();
@@ -45,10 +46,20 @@ export default function AddMovieScreen() {
     setLoading(true);
 
     try {
+      const formattedId = formatImdbId(imdbId);
+      const imdbData = await fetchIMDbData(formattedId);
+
+      let finalName = name.trim();
+      if (!finalName && imdbData?.primaryTitle) {
+        finalName = imdbData.primaryTitle;
+      }
+
       const { error: insertError } = await supabase.from('movies').insert({
-        name: name.trim() || '',
-        imdb_id: formatImdbId(imdbId),
+        name: finalName,
+        imdb_id: formattedId,
         youtube_url: youtubeUrl.trim(),
+        genres: imdbData?.genres || [],
+        imdb_data: imdbData || null
       });
 
       if (insertError) {
@@ -59,7 +70,7 @@ export default function AddMovieScreen() {
       setImdbId('');
       setYoutubeUrl('');
 
-      router.push('/(tabs)/');
+      router.push('/(tabs)');
     } catch (err: any) {
       console.error('Error adding movie:', err);
       if (err.code === '23505') {

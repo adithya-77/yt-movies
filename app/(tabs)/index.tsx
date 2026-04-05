@@ -58,7 +58,21 @@ export default function HomeScreen() {
       if (data) {
         const moviesWithImdbData = await Promise.all(
           data.map(async (movie) => {
+            // 1. If cached in DB, use it instantly (Zero latency)
+            if (movie.imdb_data) {
+              return {
+                ...movie,
+                imdbData: movie.imdb_data,
+              };
+            }
+
+            // 2. Fallback for old movies: fetch from API and lazy-migrate to DB
             const imdbData = await fetchIMDbData(movie.imdb_id);
+            if (imdbData) {
+              // Update Supabase in the background so next time it's instant
+              supabase.from('movies').update({ imdb_data: imdbData }).eq('id', movie.id).then();
+            }
+
             return {
               ...movie,
               imdbData: imdbData || undefined,

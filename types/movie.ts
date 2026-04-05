@@ -4,6 +4,7 @@ export interface Movie {
   imdb_id: string;
   youtube_url: string;
   genres?: string[];
+  imdb_data?: any;
   created_at: string;
 }
 
@@ -22,6 +23,9 @@ export interface IMDbMovie {
     voteCount?: number;
   };
   runtimeSeconds?: number;
+  stars?: any[];
+  directors?: any[];
+  writers?: any[];
 }
 
 export interface CachedMovie extends Movie {
